@@ -1,7 +1,8 @@
 use rand::seq::SliceRandom;
+use std::collections::HashMap;
 use std::io::{self, Write};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum Suit {
     Spades,
     Hearts,
@@ -29,6 +30,40 @@ struct Card {
 impl std::fmt::Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:>2}{}", self.rank, self.suit)
+    }
+}
+
+enum PokerHand {
+    HighCard,
+    Pair,
+    TwoPair,
+    ThreeOfAKind,
+    Straight,
+    Flush,
+    FullHouse,
+    FourOfAKind,
+    StraightFlush,
+    FiveOfAKind,
+    FlushHouse,  // e.g. 5♠, 5♠, 5♠, 8♠, 8♠
+    FlushFive,  // e.g. five 7♣ cards
+}
+
+impl std::fmt::Display for PokerHand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PokerHand::HighCard => write!(f, "High Card"),
+            PokerHand::Pair => write!(f, "Pair"),
+            PokerHand::TwoPair => write!(f, "Two Pair"),
+            PokerHand::ThreeOfAKind => write!(f, "Three of a Kind"),
+            PokerHand::Straight => write!(f, "Straight"),
+            PokerHand::Flush => write!(f, "Flush"),
+            PokerHand::FullHouse => write!(f, "Full House"),
+            PokerHand::FourOfAKind => write!(f, "Four of a Kind"),
+            PokerHand::StraightFlush => write!(f, "Straight Flush"),
+            PokerHand::FiveOfAKind => write!(f, "Five of a Kind"),
+            PokerHand::FlushHouse => write!(f, "Flush House"),
+            PokerHand::FlushFive => write!(f, "Flush Five"),
+        }
     }
 }
 
@@ -287,15 +322,19 @@ impl GameManager {
                 }
                 
                 // Determine poker hand
-                let hand_type = self.determine_poker_hand(&played_cards);
+                let (hand_type, scoring_cards) = self.determine_poker_hand(&played_cards);
                 println!("\nHand type: {}", hand_type);
                 
                 // Calculate score for this hand
-                let hand_score = self.calculate_hand_score(&played_cards, &hand_type);
-                println!("Hand score: {}", hand_score);
+                let (chips, mult) = self.calculate_hand_score(&played_cards, &hand_type, &scoring_cards);
+
+                // End of round joker multipliers
+                // TODO
                 
                 // Add to total score
-                self.current_round.score += hand_score;
+                let round_score = chips * mult;
+                println!("Round score: {} x {} = {}", chips, mult, round_score);
+                self.current_round.score += round_score;
                 println!("Total score: {}", self.current_round.score);
                 
                 // Remove played cards from hand
@@ -335,18 +374,169 @@ impl GameManager {
         }
     }
     
-    // Helper method to determine the poker hand type
-    fn determine_poker_hand(&self, cards: &[Card]) -> String {
-        // This is a simplified version - you'll want to implement proper poker hand evaluation
-        // For now, just return a placeholder
-        "High Card".to_string()
+    // Helper method to determine the poker hand type. Returns the hand type and a list of indexes of the cards that have scored
+    fn determine_poker_hand(&self, cards: &[Card]) -> (PokerHand, Vec<usize>) {
+        // Start from the highest hand type and work down
+
+        let is_flush = cards.len() == 5 && cards.iter().all(|card| match (&card.suit, &cards[0].suit) {
+            (Suit::Spades, Suit::Spades) => true,
+            (Suit::Hearts, Suit::Hearts) => true,
+            (Suit::Clubs, Suit::Clubs) => true,
+            (Suit::Diamonds, Suit::Diamonds) => true,
+            _ => false,
+        });
+        let is_straight = {
+            if cards.len() != 5 { 
+                false  // can only have a straight with 5 cards
+            } else {
+                let char_to_num = |c: &String| match c.as_str() {
+                    "A" => 14,
+                    "K" => 13, 
+                    "Q" => 12,
+                    "J" => 11,
+                    _ => c.parse::<u8>().unwrap()
+                };
+                let mut ranks = cards.iter()
+                    .map(|card| char_to_num(&card.rank))
+                    .collect::<Vec<_>>();
+                ranks.sort();
+                // Numbers should be exactly one away from each other; exception is A,2,3,4,5 since A=1 or A=14
+                ranks.windows(2).all(|w| w[1] - w[0] == 1) || ranks == vec![2, 3, 4, 5, 14]
+            }
+        };
+
+        // For hands that use all cards, we'll use this
+        let all_indices: Vec<usize> = (0..cards.len()).collect();
+        let mut rank_indices: HashMap<&String, Vec<usize>> = HashMap::new();
+        for (i, card) in cards.iter().enumerate() {
+            rank_indices.entry(&card.rank).or_insert(Vec::new()).push(i);
+        }
+
+        // FLUSH FIVE [7♣, 7♣, 7♣, 7♣, 7♣]
+        if cards.iter().all(|card| card.rank == cards[0].rank && card.suit == cards[0].suit) {
+            return (PokerHand::FlushFive, all_indices.clone());
+        }
+
+        // util: `ranks` will store the count of each rank
+        let mut ranks = HashMap::new();
+        for card in cards {
+            *ranks.entry(card.rank.clone()).or_insert(0) += 1;
+        }
+
+        // FLUSH HOUSE [5♠, 5♠, 5♠, 8♠, 8♠]
+        if is_flush {
+            if ranks.len() == 2 && ranks.values().any(|&count| count == 3) && ranks.values().any(|&count| count == 2) {
+                return (PokerHand::FlushHouse, all_indices.clone());
+            }
+        }
+
+        // FIVE OF A KIND [7♣, 7♥, 7♠, 7♣, 7♦]
+        if cards.iter().all(|card| card.rank == cards[0].rank) && cards.len() == 5 {
+            return (PokerHand::FiveOfAKind, all_indices.clone());
+        }
+
+        // STRAIGHT FLUSH [8♥, 9♥, 10♥, J♥, Q♥]
+        if is_flush && is_straight {
+            return (PokerHand::StraightFlush, all_indices.clone());
+        }
+
+        // FOUR OF A KIND [6♣, 6♥, 6♠, 6♦, 8♣]
+        if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 4) {
+            return (PokerHand::FourOfAKind, rank_indices.get(rank).unwrap().clone());
+        }
+
+        // FULL HOUSE [Q♠, Q♣, Q♥, 7♥, 7♦]
+        if ranks.len() == 2 && ranks.values().any(|&count| count == 3) && ranks.values().any(|&count| count == 2) {
+            return (PokerHand::FullHouse, all_indices.clone());
+        }
+
+        // FLUSH [A♣, 4♣, 7♣, 8♣, 10♣]
+        if is_flush {
+            return (PokerHand::Flush, all_indices.clone());
+        }
+
+        // STRAIGHT [8♣, 9♦, 10♠, J♠, Q♣]
+        if is_straight {
+            return (PokerHand::Straight, all_indices.clone());
+        }
+
+        // THREE OF A KIND [2♠, 2♥, 2♦, 6♠, 9♦]
+        if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 3) {
+            return (PokerHand::ThreeOfAKind, rank_indices.get(rank).unwrap().clone());
+        }
+
+        // TWO PAIR [5♠, 5♥, 8♠, 8♦, 10♣]
+        if ranks.values().filter(|&&count| count == 2).count() == 2 {
+            let mut pair_indices = Vec::new();
+            for (rank, &count) in &ranks {
+                if count == 2 {
+                    pair_indices.extend(rank_indices.get(rank).unwrap());
+                }
+            }
+            return (PokerHand::TwoPair, pair_indices);
+        }
+
+        // PAIR [A♠, A♦, 4♣, 7♥, 9♥]
+        if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 2) {
+            return (PokerHand::Pair, rank_indices.get(rank).unwrap().clone());
+        }
+
+        // HIGH CARD [A♣, 4♦, 7♥, 8♣, K♦]
+        let char_to_num = |c: &String| match c.as_str() {
+            "A" => 14,
+            "K" => 13, 
+            "Q" => 12,
+            "J" => 11,
+            _ => c.parse::<u8>().unwrap()
+        };
+        
+        let mut highest_idx = 0;
+        let mut highest_val = 0;
+        for (i, card) in cards.iter().enumerate() {
+            let val = char_to_num(&card.rank);
+            if val > highest_val {
+                highest_val = val;
+                highest_idx = i;
+            }
+        }
+        
+        (PokerHand::HighCard, vec![highest_idx])
     }
     
-    // Helper method to calculate the score for a hand
-    fn calculate_hand_score(&self, cards: &[Card], hand_type: &str) -> u64 {
-        // This is a simplified version - you'll want to implement proper scoring
-        // For now, just return a placeholder score
-        100
+    // Helper method to calculate the score for a hand. Returns (Chips, Mult)
+    fn calculate_hand_score(&self, cards: &[Card], hand_type: &PokerHand, scoring_cards: &Vec<usize>) -> (u64, u64) {
+        // Get base chips and mult
+        let (mut chips, mut mult) = match hand_type {
+            PokerHand::FlushFive => (160, 16),
+            PokerHand::FlushHouse => (140, 14),
+            PokerHand::FiveOfAKind => (120, 12),
+            PokerHand::StraightFlush => (100, 8),
+            PokerHand::FourOfAKind => (60, 7),
+            PokerHand::FullHouse => (40, 4),
+            PokerHand::Flush => (35, 4),
+            PokerHand::Straight => (30, 4),
+            PokerHand::ThreeOfAKind => (30, 3),
+            PokerHand::TwoPair => (20, 2),
+            PokerHand::Pair => (10, 2),
+            PokerHand::HighCard => (5, 1),
+        };
+        println!("{} gives {} x {}", hand_type, chips, mult);
+
+        // Add points for scoring cards
+        for &i in scoring_cards.iter() {
+            let card = &cards[i];
+            let card_score = match card.rank.as_str() {
+                "A" => 11,
+                "K" => 10,
+                "Q" => 10,
+                "J" => 10,
+                _ => card.rank.parse::<u64>().unwrap()
+            };
+            println!("{} scores {}", card, card_score);
+            chips += card_score;
+        }
+
+        return (chips, mult);
     }
 }
 
