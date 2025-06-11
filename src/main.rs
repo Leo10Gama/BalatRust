@@ -71,13 +71,75 @@ impl std::fmt::Display for PokerHand {
 #[derive(Clone)]
 struct Joker {
     name: String,
+    description: String,
+}
+
+trait JokerAbility {
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
+
+    // Joker ability that triggers when a hand is played
+    fn on_play(&self, chips: &mut u64, mult: &mut u64) {
+        // Default implementation is empty
+    }
+
+    // Joker ability that triggers when a card is scored
+    fn on_score(&self, chips: &mut u64, mult: &mut u64) {
+        // Default implementation is empty
+    }
+
+    // Joker ability that triggers at the end of the round
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
+        // Default implementation is empty
+    }
+}
+
+struct JimboJoker {
+    base: Joker,
+}
+
+impl JokerAbility for JimboJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +4 mult at end of the round
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
+        println!("{}: +4 Mult", self.base.name);
+        *mult += 4;
+    }
+}
+
+struct JokerFactory {}
+
+impl JokerFactory {
+    fn create_joker(name: &str) -> Box<dyn JokerAbility> {
+        match name {
+            "Joker" => Box::new(JimboJoker {
+                base: Joker {
+                    name: "Joker".to_string(),
+                    description: "+4 Mult".to_string(),
+                },
+            }),
+            _ => Box::new(JimboJoker {  // default to Jimbo
+                base: Joker {
+                    name: "Joker".to_string(),
+                    description: "+4 Mult".to_string(),
+                },
+            }),
+        }
+    }
 }
 
 struct Player {
     // Passive game stats
     money: i32,  // start the run with $4
     deck: Vec<Card>,  // start with standard 52
-    jokers: Vec<Joker>,
+    jokers: Vec<Box<dyn JokerAbility>>,
     // consumables: Vec<Consumable>,  // TBD; things like planet cards, tarot cards, and spectral cards
 
     // Change per round
@@ -242,7 +304,16 @@ impl GameManager {
         println!("\n=== {} - Ante {} ===", self.current_blind, self.ante);
         println!("Target: {} points", self.current_round.blind.score);
         println!("Current score: {}", self.current_round.score);
-        
+
+        // Print jokers and their abilities (description)
+        println!("\nJokers:");
+        if &self.player.jokers.len() == 0 {
+            println!("None");
+        }
+        for joker in &self.player.jokers {
+            println!("[{}]: {}", joker.name(), joker.description());
+        }
+
         // Print the cards in the player's hand (plus indices for selection)
         println!("\nYour hand:");
         for (i, card) in self.player.cards_in_hand.iter().enumerate() {
@@ -327,9 +398,6 @@ impl GameManager {
                 
                 // Calculate score for this hand
                 let (chips, mult) = self.calculate_hand_score(&played_cards, &hand_type, &scoring_cards);
-
-                // End of round joker multipliers
-                // TODO
                 
                 // Add to total score
                 let round_score = chips * mult;
@@ -338,6 +406,7 @@ impl GameManager {
                 println!("Total score: {}", self.current_round.score);
                 
                 // Remove played cards from hand
+                self.player.discard_cards(&indices);
                 self.player.discard_cards(&indices);
                 
                 // Check if round is complete
@@ -524,6 +593,7 @@ impl GameManager {
 
         // Add points for scoring cards
         for &i in scoring_cards.iter() {
+            // Score face value
             let card = &cards[i];
             let card_score = match card.rank.as_str() {
                 "A" => 11,
@@ -534,6 +604,13 @@ impl GameManager {
             };
             println!("{} scores {}", card, card_score);
             chips += card_score;
+            // Score any bonuses from jokers with ON SCORE abilities
+            // TODO
+        }
+
+        // Score any bonuses from jokers with END OF ROUND abilities
+        for joker in &self.player.jokers {
+            joker.end_of_round(&mut chips, &mut mult);
         }
 
         return (chips, mult);
@@ -547,13 +624,13 @@ impl GameManager {
  * 3. Player selects 1-5 cards, and either discards or plays
  *   a. If discards, remove selected cards from hand and replace with new cards, repeat
  *   b. If plays, play selected cards
- * 4. "HAND PLAYED" Determine the type of hand that has been played, as well as which of the cards will be counted for scoring
- * 5. Activate any Jokers' "HAND PLAYED" abilities (e.g. clone card, remove enhancement)
+ * 4. "ON PLAY" Determine the type of hand that has been played, as well as which of the cards will be counted for scoring
+ * 5. Activate any Jokers' "ON PLAY" abilities (e.g. clone card, remove enhancement)
  * 6. Iterate through each card, scoring as follows:
  *   a. If the card is debuffed, skip
  *   b. Add the card's face value to "chips"
  *   c. If the card has any enhancements add those to either "chips" or "mult"
- *   d. Activate any Jokers' "CARD SCORED" abilities (e.g. +Mult for suit, +Chips for rank, etc)
+ *   d. Activate any Jokers' "ON SCORE" abilities (e.g. +Mult for suit, +Chips for rank, etc)
  * 7. After all cards have been scored, iterate through the cards left in the player's hand for cards that trigger in-hand (e.g. steel cards)
  * 8. Activate any Jokers' "END OF ROUND" abilities (e.g. x3 mult if enhanced cards, +Chips if hand is two pair, etc)
  * 9. Calculate hand score via "chips x mult", add to total score, check if we've won or need to keep playing and action accordingly
@@ -571,7 +648,7 @@ fn main() {
             deck.push(Card { suit: suit.clone(), rank: rank.to_string() });
         }
     }
-    let player = Player {
+    let mut player = Player {
         money: 4,
         deck,
         jokers: Vec::new(),
@@ -584,6 +661,10 @@ fn main() {
         max_discards: 3,
         max_jokers: 5,
     };
+
+    // test joker
+    let joker = JokerFactory::create_joker("Joker");
+    player.jokers.push(joker);
 
     let mut game_manager = GameManager::new(player);
 
