@@ -84,7 +84,7 @@ trait JokerAbility {
     }
 
     // Joker ability that triggers when a card is scored
-    fn on_score(&self, chips: &mut u64, mult: &mut u64) {
+    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
         // Default implementation is empty
     }
 
@@ -109,8 +109,96 @@ impl JokerAbility for JimboJoker {
 
     // +4 mult at end of the round
     fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
-        println!("{}: +4 Mult", self.base.name);
+        println!("{}: +4 mult", self.base.name);
         *mult += 4;
+    }
+}
+
+struct GreedyJoker {
+    base: Joker,
+}
+
+impl JokerAbility for GreedyJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +3 mult for diamonds
+    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
+        if card.suit == Suit::Diamonds {
+            println!("{}: +3 mult", self.base.name);
+            *mult += 3;
+        }
+    }
+}
+
+struct LustyJoker {
+    base: Joker,
+}
+
+impl JokerAbility for LustyJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +3 mult for hearts
+    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
+        if card.suit == Suit::Hearts {
+            println!("{}: +3 mult", self.base.name);
+            *mult += 3;
+        }
+    }
+}
+
+struct WrathfulJoker {
+    base: Joker,
+}
+
+impl JokerAbility for WrathfulJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +3 mult for spades
+    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
+        if card.suit == Suit::Spades {
+            println!("{}: +3 mult", self.base.name);
+            *mult += 3;
+        }
+    }
+}
+
+struct GluttonousJoker {
+    base: Joker,
+}
+
+impl JokerAbility for GluttonousJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +3 mult for clubs
+    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
+        if card.suit == Suit::Clubs {
+            println!("{}: +3 mult", self.base.name);
+            *mult += 3;
+        }
     }
 }
 
@@ -124,6 +212,30 @@ impl JokerFactory {
                     name: "Joker".to_string(),
                     description: "+4 Mult".to_string(),
                 },
+            }),
+            "Greedy Joker" => Box::new(GreedyJoker {
+                base: Joker {
+                    name: "Greedy Joker".to_string(),
+                    description: "Played cards with ♦Diamond suit give +3 Mult when scored".to_string(),
+                }
+            }),
+            "Lusty Joker" => Box::new(LustyJoker {
+                base: Joker {
+                    name: "Lusty Joker".to_string(),
+                    description: "Played cards with ♥Heart suit give +3 Mult when scored".to_string(),
+                }
+            }),
+            "Wrathful Joker" => Box::new(WrathfulJoker {
+                base: Joker {
+                    name: "Wrathful Joker".to_string(),
+                    description: "Played cards with ♠Spade suit give +3 Mult when scored".to_string(),
+                }
+            }),
+            "Gluttonous Joker" => Box::new(GluttonousJoker {
+                base: Joker {
+                    name: "Gluttonous Joker".to_string(),
+                    description: "Played cards with ♣Club suit give +3 Mult when scored".to_string(),
+                }
             }),
             _ => Box::new(JimboJoker {  // default to Jimbo
                 base: Joker {
@@ -307,7 +419,7 @@ impl GameManager {
 
         // Print jokers and their abilities (description)
         println!("\nJokers:");
-        if &self.player.jokers.len() == 0 {
+        if self.player.jokers.len() == 0 {
             println!("None");
         }
         for joker in &self.player.jokers {
@@ -605,7 +717,9 @@ impl GameManager {
             println!("{} scores {}", card, card_score);
             chips += card_score;
             // Score any bonuses from jokers with ON SCORE abilities
-            // TODO
+            for joker in &self.player.jokers {
+                joker.on_score(card, &mut chips, &mut mult);
+            }
         }
 
         // Score any bonuses from jokers with END OF ROUND abilities
@@ -663,8 +777,11 @@ fn main() {
     };
 
     // test joker
-    let joker = JokerFactory::create_joker("Joker");
-    player.jokers.push(joker);
+    player.jokers.push(JokerFactory::create_joker("Wrathful Joker"));
+    player.jokers.push(JokerFactory::create_joker("Gluttonous Joker"));
+    player.jokers.push(JokerFactory::create_joker("Lusty Joker"));
+    player.jokers.push(JokerFactory::create_joker("Greedy Joker"));
+
 
     let mut game_manager = GameManager::new(player);
 
