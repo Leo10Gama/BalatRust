@@ -1,9 +1,19 @@
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::thread;
+use std::time::Duration;
+
+mod jokers;
+
+use jokers::{Joker, JokerAbility, JokerFactory};
+
+pub fn pause_after_print(milliseconds: u64) {
+    thread::sleep(Duration::from_millis(milliseconds));
+}
 
 #[derive(Clone, Debug, PartialEq)]
-enum Suit {
+pub enum Suit {
     Spades,
     Hearts,
     Clubs,
@@ -22,7 +32,7 @@ impl std::fmt::Display for Suit {
 }
 
 #[derive(Clone, Debug)]
-struct Card {
+pub struct Card {
     suit: Suit,
     rank: String,  // 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A
 }
@@ -33,7 +43,7 @@ impl std::fmt::Display for Card {
     }
 }
 
-enum PokerHand {
+pub enum PokerHand {
     HighCard,
     Pair,
     TwoPair,
@@ -67,191 +77,11 @@ impl std::fmt::Display for PokerHand {
     }
 }
 
-// Placeholder for Joker struct
-#[derive(Clone)]
-struct Joker {
-    name: String,
-    description: String,
-}
-
-trait JokerAbility {
-    fn name(&self) -> &str;
-    fn description(&self) -> &str;
-
-    // Joker ability that triggers when a hand is played
-    fn on_play(&self, chips: &mut u64, mult: &mut u64) {
-        // Default implementation is empty
-    }
-
-    // Joker ability that triggers when a card is scored
-    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
-        // Default implementation is empty
-    }
-
-    // Joker ability that triggers at the end of the round
-    fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
-        // Default implementation is empty
-    }
-}
-
-struct JimboJoker {
-    base: Joker,
-}
-
-impl JokerAbility for JimboJoker {
-    fn name(&self) -> &str {
-        &self.base.name
-    }
-
-    fn description(&self) -> &str {
-        &self.base.description
-    }
-
-    // +4 mult at end of the round
-    fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
-        println!("{}: +4 mult", self.base.name);
-        *mult += 4;
-    }
-}
-
-struct GreedyJoker {
-    base: Joker,
-}
-
-impl JokerAbility for GreedyJoker {
-    fn name(&self) -> &str {
-        &self.base.name
-    }
-
-    fn description(&self) -> &str {
-        &self.base.description
-    }
-
-    // +3 mult for diamonds
-    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
-        if card.suit == Suit::Diamonds {
-            println!("{}: +3 mult", self.base.name);
-            *mult += 3;
-        }
-    }
-}
-
-struct LustyJoker {
-    base: Joker,
-}
-
-impl JokerAbility for LustyJoker {
-    fn name(&self) -> &str {
-        &self.base.name
-    }
-
-    fn description(&self) -> &str {
-        &self.base.description
-    }
-
-    // +3 mult for hearts
-    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
-        if card.suit == Suit::Hearts {
-            println!("{}: +3 mult", self.base.name);
-            *mult += 3;
-        }
-    }
-}
-
-struct WrathfulJoker {
-    base: Joker,
-}
-
-impl JokerAbility for WrathfulJoker {
-    fn name(&self) -> &str {
-        &self.base.name
-    }
-
-    fn description(&self) -> &str {
-        &self.base.description
-    }
-
-    // +3 mult for spades
-    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
-        if card.suit == Suit::Spades {
-            println!("{}: +3 mult", self.base.name);
-            *mult += 3;
-        }
-    }
-}
-
-struct GluttonousJoker {
-    base: Joker,
-}
-
-impl JokerAbility for GluttonousJoker {
-    fn name(&self) -> &str {
-        &self.base.name
-    }
-
-    fn description(&self) -> &str {
-        &self.base.description
-    }
-
-    // +3 mult for clubs
-    fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
-        if card.suit == Suit::Clubs {
-            println!("{}: +3 mult", self.base.name);
-            *mult += 3;
-        }
-    }
-}
-
-struct JokerFactory {}
-
-impl JokerFactory {
-    fn create_joker(name: &str) -> Box<dyn JokerAbility> {
-        match name {
-            "Joker" => Box::new(JimboJoker {
-                base: Joker {
-                    name: "Joker".to_string(),
-                    description: "+4 Mult".to_string(),
-                },
-            }),
-            "Greedy Joker" => Box::new(GreedyJoker {
-                base: Joker {
-                    name: "Greedy Joker".to_string(),
-                    description: "Played cards with ♦Diamond suit give +3 Mult when scored".to_string(),
-                }
-            }),
-            "Lusty Joker" => Box::new(LustyJoker {
-                base: Joker {
-                    name: "Lusty Joker".to_string(),
-                    description: "Played cards with ♥Heart suit give +3 Mult when scored".to_string(),
-                }
-            }),
-            "Wrathful Joker" => Box::new(WrathfulJoker {
-                base: Joker {
-                    name: "Wrathful Joker".to_string(),
-                    description: "Played cards with ♠Spade suit give +3 Mult when scored".to_string(),
-                }
-            }),
-            "Gluttonous Joker" => Box::new(GluttonousJoker {
-                base: Joker {
-                    name: "Gluttonous Joker".to_string(),
-                    description: "Played cards with ♣Club suit give +3 Mult when scored".to_string(),
-                }
-            }),
-            _ => Box::new(JimboJoker {  // default to Jimbo
-                base: Joker {
-                    name: "Joker".to_string(),
-                    description: "+4 Mult".to_string(),
-                },
-            }),
-        }
-    }
-}
-
-struct Player {
+pub struct Player {
     // Passive game stats
     money: i32,  // start the run with $4
     deck: Vec<Card>,  // start with standard 52
-    jokers: Vec<Box<dyn JokerAbility>>,
+    jokers: Vec<Box<dyn jokers::JokerAbility>>,
     // consumables: Vec<Consumable>,  // TBD; things like planet cards, tarot cards, and spectral cards
 
     // Change per round
@@ -331,7 +161,7 @@ impl std::fmt::Display for BlindType {
     }
 }
 
-struct Blind {
+pub struct Blind {
     name: String,
     score: u64,
 }
@@ -357,7 +187,7 @@ impl Blind {
     }
 }
 
-struct Round {
+pub struct Round {
     blind: Blind,
     score: u64,
 }
@@ -372,7 +202,7 @@ impl Round {
     }
 }
 
-struct GameManager {
+pub struct GameManager {
     ante: u8, // begins at 1
     current_blind: BlindType,
     current_round: Round,
@@ -428,9 +258,12 @@ impl GameManager {
 
         // Print the cards in the player's hand (plus indices for selection)
         println!("\nYour hand:");
+        pause_after_print(400);
         for (i, card) in self.player.cards_in_hand.iter().enumerate() {
             println!("[{}] {}", i, card);
+            pause_after_print(100);
         }
+        pause_after_print(300);
         
         // Print available actions
         println!("\nHands remaining: {}", self.player.hands);
@@ -450,6 +283,7 @@ impl GameManager {
         let parts: Vec<&str> = input.trim().split_whitespace().collect();
         if parts.len() != 2 {
             println!("Invalid input! Please try again.");
+            pause_after_print(1000);
             return 2;
         }
         
@@ -463,12 +297,14 @@ impl GameManager {
         // Check if indices are valid
         if indices.is_empty() || indices.len() > 5 {
             println!("You must select between 1 and 5 cards!");
+            pause_after_print(1000);
             return 2;
         }
         
         for &idx in &indices {
             if idx >= self.player.cards_in_hand.len() {
                 println!("Invalid card index: {}", idx);
+                pause_after_print(1000);
                 return 2;
             }
         }
@@ -480,6 +316,7 @@ impl GameManager {
                 // Check if player has discards left
                 if self.player.discards == 0 {
                     println!("No discards remaining!");
+                    pause_after_print(1000);
                     return 2;
                 }
                 
@@ -487,8 +324,10 @@ impl GameManager {
                 self.player.discard_cards(&indices);
                 self.player.discards -= 1;
                 println!("Cards discarded. New hand:");
+                pause_after_print(300);
                 for (i, card) in self.player.cards_in_hand.iter().enumerate() {
                     println!("[{}] {}", i, card);
+                    pause_after_print(100);
                 }
             },
             "p" | "P" => {
@@ -497,16 +336,20 @@ impl GameManager {
                 
                 // Play selected cards
                 println!("Playing cards:");
+                pause_after_print(300);
                 let mut played_cards = Vec::new();
                 for &idx in &indices {
                     let card = &self.player.cards_in_hand[idx];
                     println!("{}", card);
+                    pause_after_print(200);
                     played_cards.push(card.clone());
                 }
+                pause_after_print(500);
                 
                 // Determine poker hand
                 let (hand_type, scoring_cards) = self.determine_poker_hand(&played_cards);
                 println!("\nHand type: {}", hand_type);
+                pause_after_print(500);
                 
                 // Calculate score for this hand
                 let (chips, mult) = self.calculate_hand_score(&played_cards, &hand_type, &scoring_cards);
@@ -515,7 +358,9 @@ impl GameManager {
                 let round_score = chips * mult;
                 println!("Round score: {} x {} = {}", chips, mult, round_score);
                 self.current_round.score += round_score;
+                pause_after_print(400);
                 println!("Total score: {}", self.current_round.score);
+                pause_after_print(1000);
                 
                 // Remove played cards from hand
                 self.player.discard_cards(&indices);
@@ -532,6 +377,7 @@ impl GameManager {
             },
             _ => {
                 println!("Invalid action! Use 'd' for discard or 'p' for play.");
+                pause_after_print(1000);
             }
         }
         return 2;
@@ -702,6 +548,7 @@ impl GameManager {
             PokerHand::HighCard => (5, 1),
         };
         println!("{} gives {} x {}", hand_type, chips, mult);
+        pause_after_print(400);
 
         // Add points for scoring cards
         for &i in scoring_cards.iter() {
@@ -715,6 +562,7 @@ impl GameManager {
                 _ => card.rank.parse::<u64>().unwrap()
             };
             println!("{} scores {}", card, card_score);
+            pause_after_print(400);
             chips += card_score;
             // Score any bonuses from jokers with ON SCORE abilities
             for joker in &self.player.jokers {
