@@ -13,7 +13,7 @@ pub trait JokerAbility {
     fn description(&self) -> &str;
 
     // Joker ability that triggers when a hand is played
-    fn on_play(&self, chips: &mut u64, mult: &mut u64) {
+    fn on_play(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], played_cards: &Vec<usize>) {
         // Default implementation is empty
     }
 
@@ -23,7 +23,7 @@ pub trait JokerAbility {
     }
 
     // Joker ability that triggers at the end of the round
-    fn end_of_round(&self, chips: &mut u64, mult: &mut u64) {
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
         // Default implementation is empty
     }
 }
@@ -61,6 +61,36 @@ impl JokerFactory {
                 base: Joker {
                     name: "Gluttonous Joker".to_string(),
                     description: "Played cards with ♣Club suit give +3 Mult when scored".to_string(),
+                }
+            }),
+            "Jolly Joker" => Box::new(JollyJoker {
+                base: Joker {
+                    name: "Jolly Joker".to_string(),
+                    description: "+8 Mult if played hand contains a Pair".to_string(),
+                }
+            }),
+            "Zany Joker" => Box::new(ZanyJoker {
+                base: Joker {
+                    name: "Zany Joker".to_string(),
+                    description: "+12 Mult if played hand contains a Three of a Kind".to_string(),
+                }
+            }),
+            "Mad Joker" => Box::new(MadJoker {
+                base: Joker {
+                    name: "Mad Joker".to_string(),
+                    description: "+10 Mult if played hand contains a Two Pair".to_string(),
+                }
+            }),
+            "Crazy Joker" => Box::new(CrazyJoker {
+                base: Joker {
+                    name: "Crazy Joker".to_string(),
+                    description: "+12 Mult if played hand contains a Straight".to_string(),
+                }
+            }),
+            "Droll Joker" => Box::new(DrollJoker {
+                base: Joker {
+                    name: "Droll Joker".to_string(),
+                    description: "+10 Mult if played hand contains a Flush".to_string(),
                 }
             }),
             _ => Box::new(JimboJoker {  // default to Jimbo
