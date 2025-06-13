@@ -7,42 +7,15 @@ use colored::*;
 use rand::Rng;
 
 mod jokers;
+mod blinds;
+mod cards;
 
 use jokers::{Joker, JokerAbility, JokerFactory};
+use blinds::{Blind, BlindType, BossBlindAbility};
+use cards::{Card, Suit};
 
 pub fn pause_after_print(milliseconds: u64) {
     thread::sleep(Duration::from_millis(milliseconds));
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Suit {
-    Spades,
-    Hearts,
-    Clubs,
-    Diamonds,
-}
-
-impl std::fmt::Display for Suit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Suit::Spades => write!(f, "♠"),
-            Suit::Hearts => write!(f, "{}", "♥".red()),
-            Suit::Clubs => write!(f, "{}", "♣".green()),
-            Suit::Diamonds => write!(f, "{}", "♦".bright_blue()),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Card {
-    suit: Suit,
-    rank: String,  // 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A
-}
-
-impl std::fmt::Display for Card {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>2}{}", self.rank, self.suit)
-    }
 }
 
 pub enum PokerHand {
@@ -228,159 +201,7 @@ impl Player {
     }
 }
 
-const ANTES: [u64; 15] = [
-    100, 300, 800, 2000, 5000, 11_000, 20_000, 35_000, 50_000,
-    110_000, 560_000, 7_200_000, 300_000_000, 47_000_000_000, 29_000_000_000_000, // additional antes cut off for sake of simplicity
-];
 
-#[derive(Clone, Copy)]
-enum BlindType {
-    Small,
-    Big,
-    Boss,
-}
-
-impl std::fmt::Display for BlindType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BlindType::Small => write!(f, "Small Blind"),
-            BlindType::Big => write!(f, "Big Blind"),
-            BlindType::Boss => write!(f, "Boss Blind"),
-        }
-    }
-}
-
-pub struct Blind {
-    name: String,
-    score: u64,
-    description: String,
-    boss_ability: Option<Box<dyn BossBlindAbility>>,
-}
-
-pub trait BossBlindAbility {
-    fn name(&self) -> &str;
-    fn description(&self) -> &str;
-
-    fn is_card_debuffed(&self, card: &Card) -> bool;
-
-    // potential additional effects
-}
-
-pub struct TheClub;
-
-impl BossBlindAbility for TheClub {
-    fn name(&self) -> &str {
-        "The Club"
-    }
-
-    fn description(&self) -> &str {
-        "All Club cards are debuffed"
-    }
-
-    fn is_card_debuffed(&self, card: &Card) -> bool {
-        card.suit == Suit::Clubs
-    }
-}
-
-pub struct TheGoad;
-
-impl BossBlindAbility for TheGoad {
-    fn name(&self) -> &str {
-        "The Goad"
-    }
-
-    fn description(&self) -> &str {
-        "All Spade cards are debuffed"
-    }
-
-    fn is_card_debuffed(&self, card: &Card) -> bool {
-        card.suit == Suit::Spades
-    }
-}
-
-pub struct TheWindow;
-
-impl BossBlindAbility for TheWindow {
-    fn name(&self) -> &str {
-        "The Window"
-    }
-
-    fn description(&self) -> &str {
-        "All Diamond cards are debuffed"
-    }
-
-    fn is_card_debuffed(&self, card: &Card) -> bool {
-        card.suit == Suit::Diamonds
-    }
-}
-
-pub struct TheHead;
-
-impl BossBlindAbility for TheHead {
-    fn name(&self) -> &str {
-        "The Head"
-    }
-
-    fn description(&self) -> &str {
-        "All Heart cards are debuffed"
-    }
-
-    fn is_card_debuffed(&self, card: &Card) -> bool {
-        card.suit == Suit::Hearts
-    }
-}
-
-pub struct BossBlindFactory;
-
-impl BossBlindFactory {
-    pub fn create_boss_blind(name: &str) -> Box<dyn BossBlindAbility> {
-        match name {
-            "The Club" => Box::new(TheClub {}),
-            "The Goad" => Box::new(TheGoad {}),
-            "The Window" => Box::new(TheWindow {}),
-            "The Head" => Box::new(TheHead {}),
-            _ => panic!("Unknown boss blind ability: {}", name),
-        }
-    }
-}
-
-impl Blind {
-    fn new(blind_type: BlindType, ante: u8) -> Self {
-        match blind_type {
-            BlindType::Small => Self {
-                name: "Small Blind".to_string(),
-                score: ANTES[ante as usize],  // despite there being an ante 0, we start at 1
-                description: "".to_string(),
-                boss_ability: None,
-            },
-            BlindType::Big => Self {
-                name: "Big Blind".to_string(), 
-                score: (ANTES[ante as usize] as f64 * 1.5) as u64,
-                description: "".to_string(),
-                boss_ability: None,
-            },
-            BlindType::Boss => {
-                let ability = {
-                    let boss_blinds = vec![  // pick a boss blind at random
-                        "The Club",
-                        "The Goad",
-                        "The Window",
-                        "The Head",
-                    ];
-                    let mut rng = rand::thread_rng();
-                    let random_boss = boss_blinds.choose(&mut rng).unwrap();
-                    BossBlindFactory::create_boss_blind(random_boss)
-                };
-                Self {
-                    name: format!("Boss Blind - {}", ability.name()),
-                    score: ANTES[ante as usize] * 2,
-                    description: ability.description().to_string(),
-                    boss_ability: Some(ability),
-                }
-            },
-        }
-    }
-}
 
 pub struct Round {
     blind: Blind,
@@ -633,7 +454,7 @@ impl GameManager {
             PokerHand::Pair => (10, 2),
             PokerHand::HighCard => (5, 1),
         };
-        println!("{} gives {} x {}", hand_type, chips, mult);
+        println!("{} gives {} x {}", hand_type, chips.to_string().cyan(), mult.to_string().red());
         pause_after_print(400);
 
         // Add points for scoring cards
