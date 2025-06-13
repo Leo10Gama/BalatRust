@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
 use colored::*;
+use rand::Rng;
 
 mod jokers;
 
@@ -59,6 +60,12 @@ pub enum PokerHand {
     FlushFive,  // e.g. five 7♣ cards
 }
 
+#[derive(PartialEq)]
+enum SortMethod {
+    ByRank,
+    BySuit,
+}
+
 impl std::fmt::Display for PokerHand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -97,6 +104,9 @@ pub struct Player {
     max_hands: u8,  // starts at 4
     max_jokers: u8,  // starts at 5
     // max_consumables: u8,  // starts at 2; implementation TBD
+    
+    // UI preferences
+    sort_method: SortMethod,
 }
 
 impl Player {
@@ -108,6 +118,7 @@ impl Player {
                 break;
             }
         }
+        self.sort_cards_in_hand();
     }
 
     fn shuffle_deck(&mut self) {
@@ -142,6 +153,78 @@ impl Player {
         
         // Deal new cards to replace the discarded ones
         self.deal_hand();
+    }
+    
+    // Sort cards in hand based on current sort method
+    fn sort_cards_in_hand(&mut self) {
+        match self.sort_method {
+            SortMethod::ByRank => self.sort_by_rank(),
+            SortMethod::BySuit => self.sort_by_suit(),
+        }
+    }
+
+    // Sort cards by rank (2,3,4,...,J,Q,K,A)
+    fn sort_by_rank(&mut self) {
+        self.cards_in_hand.sort_by(|a, b| {
+            let rank_value = |rank: &str| -> u8 {
+                match rank {
+                    "A" => 14,
+                    "K" => 13,
+                    "Q" => 12,
+                    "J" => 11,
+                    _ => rank.parse::<u8>().unwrap_or(0),
+                }
+            };
+            
+            let a_value = rank_value(&a.rank);
+            let b_value = rank_value(&b.rank);
+            
+            a_value.cmp(&b_value)
+        });
+    }
+    
+    // Sort cards by suit (♠,♥,♣,♦) and then by rank within each suit
+    fn sort_by_suit(&mut self) {
+        self.cards_in_hand.sort_by(|a, b| {
+            let suit_value = |suit: &Suit| -> u8 {
+                match suit {
+                    Suit::Spades => 0,
+                    Suit::Hearts => 1,
+                    Suit::Clubs => 2,
+                    Suit::Diamonds => 3,
+                }
+            };
+            
+            let rank_value = |rank: &str| -> u8 {
+                match rank {
+                    "A" => 14,
+                    "K" => 13,
+                    "Q" => 12,
+                    "J" => 11,
+                    _ => rank.parse::<u8>().unwrap_or(0),
+                }
+            };
+            
+            let a_suit = suit_value(&a.suit);
+            let b_suit = suit_value(&b.suit);
+            
+            if a_suit == b_suit {
+                // If suits are the same, sort by rank
+                rank_value(&a.rank).cmp(&rank_value(&b.rank))
+            } else {
+                // Otherwise sort by suit
+                a_suit.cmp(&b_suit)
+            }
+        });
+    }
+    
+    // Toggle between sorting methods
+    fn toggle_sort_method(&mut self) {
+        self.sort_method = match self.sort_method {
+            SortMethod::ByRank => SortMethod::BySuit,
+            SortMethod::BySuit => SortMethod::ByRank,
+        };
+        self.sort_cards_in_hand();
     }
 }
 
@@ -377,6 +460,10 @@ impl GameManager {
         // Print the cards in the player's hand (plus indices for selection)
         println!("\nYour hand:");
         pause_after_print(400);
+        
+        // Make sure cards are sorted before displaying
+        self.player.sort_cards_in_hand();
+        
         for (i, card) in self.player.cards_in_hand.iter().enumerate() {
             println!("[{}] {}", i, card);
             pause_after_print(100);
@@ -394,7 +481,8 @@ impl GameManager {
         println!("Discards remaining: {}", self.player.discards);
         
         // Prompt player to select cards and action
-        println!("\nSelect cards (comma-separated indices) and action (d for discard, p for play)");
+        println!("\nSelect cards (comma-separated indices) and action:");
+        println!("d for discard, p for play, s to toggle sort method");
         println!("Example: '0,1,2,3,4 p' to play the first 5 cards");
         
         // Get user input
@@ -405,6 +493,16 @@ impl GameManager {
         
         // Parse input
         let parts: Vec<&str> = input.trim().split_whitespace().collect();
+        
+        // Handle sort toggle command
+        if parts.len() == 1 && (parts[0] == "s" || parts[0] == "S") {
+            self.player.toggle_sort_method();
+            println!("Sorting method changed to: {}", 
+                if self.player.sort_method == SortMethod::ByRank { "by rank" } else { "by suit" });
+            pause_after_print(1000);
+            return 2; // Continue the game
+        }
+        
         if parts.len() != 2 {
             println!("Invalid input! Please try again.");
             pause_after_print(1000);
@@ -577,6 +675,57 @@ impl GameManager {
         }
 
         return (chips, mult);
+    }
+
+    fn manage_jokers(&mut self, new_joker_name: &str) {
+        // Check if player has reached max jokers
+        if self.player.jokers.len() >= self.player.max_jokers as usize {
+            println!("\nYou've reached your maximum joker capacity ({})!", self.player.max_jokers);
+            println!("New joker available: {}", new_joker_name);
+            
+            // Create the new joker to show its description
+            let new_joker = JokerFactory::create_joker(new_joker_name);
+            println!("Description: {}", new_joker.description());
+            
+            println!("\nYour current jokers:");
+            for (i, joker) in self.player.jokers.iter().enumerate() {
+                println!("[{}] {}: {}", i, joker.name(), joker.description());
+            }
+            
+            println!("\nOptions:");
+            println!("[0-{}] Replace a joker (enter the number)", self.player.jokers.len() - 1);
+            println!("[r] Refuse the new joker");
+            
+            // Get user input
+            print!("> ");
+            io::stdout().flush().unwrap();
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).unwrap();
+            
+            let input = input.trim();
+            
+            if input.to_lowercase() == "r" {
+                println!("You refused {}.", new_joker_name);
+                return;
+            }
+            
+            // Try to parse as index
+            if let Ok(index) = input.parse::<usize>() {
+                if index < self.player.jokers.len() {
+                    // Replace the joker at the specified index
+                    println!("Replacing {} with {}", self.player.jokers[index].name(), new_joker_name);
+                    self.player.jokers[index] = JokerFactory::create_joker(new_joker_name);
+                } else {
+                    println!("Invalid index. Refusing the new joker.");
+                }
+            } else {
+                println!("Invalid input. Refusing the new joker.");
+            }
+        } else {
+            // Just add the new joker since we're under the limit
+            println!("New joker acquired! {}", new_joker_name);
+            self.player.jokers.push(JokerFactory::create_joker(new_joker_name));
+        }
     }
 }
 
@@ -752,10 +901,11 @@ fn main() {
         max_hands: 4,
         max_discards: 3,
         max_jokers: 5,
+        sort_method: SortMethod::ByRank, // Default to sorting by rank
     };
 
     // Available jokers:
-    let available_jokers = [
+    let mut available_jokers = vec![
         "Joker",
         "Greedy Joker",
         "Lusty Joker",
@@ -782,10 +932,8 @@ fn main() {
         } else {
             game_manager.next_round();
             let mut rng = rand::thread_rng();
-            if let Some(joker_name) = available_jokers.choose(&mut rng) {
-                println!("New joker acquired! {}", joker_name);
-                game_manager.player.jokers.push(JokerFactory::create_joker(joker_name));
-            }
+            let index = rng.gen_range(0..available_jokers.len());
+            game_manager.manage_jokers(available_jokers.remove(index));
         }
     }
 }
