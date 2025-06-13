@@ -117,13 +117,14 @@ impl Player {
     }
 
     fn start_round(&mut self) {
+        self.cards_in_hand.clear();
         self.shuffle_deck();
         self.deal_hand();
         self.hands = self.max_hands;
         self.discards = self.max_discards;
     }
     
-    fn discard_cards(&mut self, indices: &[usize]) {
+    fn discard_cards(&mut self, indices: &[usize], noisy: bool) {
         // Sort indices in descending order to avoid shifting issues when removing
         let mut sorted_indices = indices.to_vec();
         sorted_indices.sort_by(|a, b| b.cmp(a));
@@ -131,6 +132,10 @@ impl Player {
         // Remove cards at the specified indices
         for &idx in &sorted_indices {
             if idx < self.cards_in_hand.len() {
+                if noisy { 
+                    println!("Discarding: {}", self.cards_in_hand[idx]); 
+                    pause_after_print(200);
+                }
                 self.cards_in_hand.remove(idx);
             }
         }
@@ -265,7 +270,13 @@ impl GameManager {
             pause_after_print(100);
         }
         pause_after_print(300);
-        
+
+        // println!("\nDEBUG - Remaining cards in deck:");
+        // for card in &self.player.current_deck {
+        //     println!("{}", card);
+        //     pause_after_print(50);
+        // }
+
         // Print available actions
         println!("\nHands remaining: {}", self.player.hands);
         println!("Discards remaining: {}", self.player.discards);
@@ -322,14 +333,8 @@ impl GameManager {
                 }
                 
                 // Discard selected cards
-                self.player.discard_cards(&indices);
+                self.player.discard_cards(&indices, true);
                 self.player.discards -= 1;
-                println!("Cards discarded. New hand:");
-                pause_after_print(300);
-                for (i, card) in self.player.cards_in_hand.iter().enumerate() {
-                    println!("[{}] {}", i, card);
-                    pause_after_print(100);
-                }
             },
             "p" | "P" => {
                 // Decrement hands counter
@@ -364,7 +369,7 @@ impl GameManager {
                 pause_after_print(1000);
                 
                 // Remove played cards from hand
-                self.player.discard_cards(&indices);
+                self.player.discard_cards(&indices, false);
                 
                 // Check if round is complete
                 if self.current_round.score >= self.current_round.blind.score {
