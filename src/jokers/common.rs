@@ -255,7 +255,7 @@ impl JokerAbility for DrollJoker {
         &self.base.description
     }
 
-    // +10 mult if hand has FLUSH
+    // +12 mult if hand has FLUSH
     fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
         // Get actual played cards that scored
         let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
@@ -266,6 +266,161 @@ impl JokerAbility for DrollJoker {
             PokerHand::Flush | PokerHand::StraightFlush | PokerHand::FlushHouse | PokerHand::FlushFive => {
                 println!("{}: +12 mult", self.base.name);
                 *mult += 12;
+                pause_after_print(400);
+            },
+            _ => {},
+        };
+    }
+}
+
+pub struct SlyJoker {
+    pub base: Joker,
+}
+
+impl JokerAbility for SlyJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +50 chips if hand has PAIR
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
+        // Get actual played cards that scored
+        let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
+            .map(|&i| cards[i].clone())
+            .collect();
+        let (hand_type, _) = determine_poker_hand(&scoring_cards);
+        match hand_type {
+            PokerHand::Pair | PokerHand::TwoPair | PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
+                println!("{}: +50 chips", self.base.name);
+                *chips += 50;
+                pause_after_print(400);
+            },
+            _ => {},
+        };
+    }
+}
+
+pub struct WilyJoker {
+    pub base: Joker,
+}
+
+impl JokerAbility for WilyJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +100 chips if hand has THREE OF A KIND
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
+        // Get actual played cards that scored
+        let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
+            .map(|&i| cards[i].clone())
+            .collect();
+        let (hand_type, _) = determine_poker_hand(&scoring_cards);
+        match hand_type {
+            PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
+                println!("{}: +100 chips", self.base.name);
+                *chips += 100;
+                pause_after_print(400);
+            },
+            _ => {},
+        };
+    }
+}
+
+pub struct CleverJoker {
+    pub base: Joker,
+}
+
+impl JokerAbility for CleverJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +80 chips if hand has TWO PAIR
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
+        // Get actual played cards that scored
+        let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
+            .map(|&i| cards[i].clone())
+            .collect();
+        let (hand_type, _) = determine_poker_hand(&scoring_cards);
+        match hand_type {
+            PokerHand::TwoPair | PokerHand::FullHouse | PokerHand::FlushHouse => {
+                println!("{}: +80 chips", self.base.name);
+                *chips += 80;
+                pause_after_print(400);
+            },
+            _ => {},
+        };
+    }
+}
+
+pub struct DeviousJoker {
+    pub base: Joker,
+}
+
+impl JokerAbility for DeviousJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +100 chips if hand has STRAIGHT
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
+        // Get actual played cards that scored
+        let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
+            .map(|&i| cards[i].clone())
+            .collect();
+        let (hand_type, _) = determine_poker_hand(&scoring_cards);
+        match hand_type {
+            PokerHand::Straight | PokerHand::StraightFlush => {
+                println!("{}: +100 chips", self.base.name);
+                *chips += 100;
+                pause_after_print(400);
+            },
+            _ => {},
+        };
+    }
+}
+
+pub struct CraftyJoker {
+    pub base: Joker,
+}
+
+impl JokerAbility for CraftyJoker {
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    // +80 chips if hand has FLUSH
+    fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
+        // Get actual played cards that scored
+        let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
+            .map(|&i| cards[i].clone())
+            .collect();
+        let (hand_type, _) = determine_poker_hand(&scoring_cards);
+        match hand_type {
+            PokerHand::Flush | PokerHand::StraightFlush | PokerHand::FlushHouse | PokerHand::FlushFive => {
+                println!("{}: +80 chips", self.base.name);
+                *chips += 80;
                 pause_after_print(400);
             },
             _ => {},

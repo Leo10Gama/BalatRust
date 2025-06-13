@@ -143,6 +143,61 @@ impl JokerFactory {
                     ),
                 }
             }),
+            "Sly Joker" => Box::new(SlyJoker {
+                base: Joker {
+                    name: "Sly Joker".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+50".cyan().bold(),
+                        "Chips".bold(),
+                        "Pair".bold()
+                    ),
+                }
+            }),
+            "Wily Joker" => Box::new(WilyJoker {
+                base: Joker {
+                    name: "Wily Joker".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+100".cyan().bold(),
+                        "Chips".bold(),
+                        "Three of a Kind".bold()
+                    ),
+                }
+            }),
+            "Clever Joker" => Box::new(CleverJoker {
+                base: Joker {
+                    name: "Clever Joker".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+80".cyan().bold(),
+                        "Chips".bold(),
+                        "Two Pair".bold()
+                    ),
+                }
+            }),
+            "Devious Joker" => Box::new(DeviousJoker {
+                base: Joker {
+                    name: "Devious Joker".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+100".cyan().bold(),
+                        "Chips".bold(),
+                        "Straight".bold()
+                    ),
+                }
+            }),
+            "Crafty Joker" => Box::new(CraftyJoker {
+                base: Joker {
+                    name: "Crafty Joker".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+80".cyan().bold(),
+                        "Chips".bold(),
+                        "Flush".bold()
+                    ),
+                }
+            }),
             _ => Box::new(JimboJoker {  // default to Jimbo
                 base: Joker {
                     name: "Joker".to_string(),

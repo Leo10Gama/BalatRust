@@ -574,9 +574,9 @@ impl GameManager {
                 let round_score = chips * mult;
                 println!("Round score: {} x {} = {}", chips, mult, round_score);
                 self.current_round.score += round_score;
-                pause_after_print(400);
-                println!("Total score: {}", self.current_round.score);
                 pause_after_print(1000);
+                println!("Total score: {}", self.current_round.score);
+                pause_after_print(2000);
                 
                 // Remove played cards from hand
                 self.player.discard_cards(&indices, false);
@@ -916,6 +916,11 @@ fn main() {
         "Mad Joker",
         "Crazy Joker",
         "Droll Joker",
+        "Sly Joker",
+        "Wily Joker",
+        "Clever Joker",
+        "Devious Joker",
+        "Crafty Joker",
     ];
     let mut game_manager = GameManager::new(player);
 
