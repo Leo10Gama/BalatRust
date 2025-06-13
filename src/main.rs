@@ -624,14 +624,19 @@ fn main() {
         max_jokers: 5,
     };
 
-    // test joker
-    // player.jokers.push(JokerFactory::create_joker("Wrathful Joker"));
-    // player.jokers.push(JokerFactory::create_joker("Gluttonous Joker"));
-    // player.jokers.push(JokerFactory::create_joker("Lusty Joker"));
-    // player.jokers.push(JokerFactory::create_joker("Greedy Joker"));
-    player.jokers.push(JokerFactory::create_joker("Droll Joker"));
-
-
+    // Available jokers:
+    let available_jokers = [
+        "Joker",
+        "Greedy Joker",
+        "Lusty Joker",
+        "Wrathful Joker",
+        "Gluttonous Joker",
+        "Jolly Joker",
+        "Zany Joker",
+        "Mad Joker",
+        "Crazy Joker",
+        "Droll Joker",
+    ];
     let mut game_manager = GameManager::new(player);
 
     // BEGIN GAME LOOP
@@ -646,6 +651,11 @@ fn main() {
             break;
         } else {
             game_manager.next_round();
+            let mut rng = rand::thread_rng();
+            if let Some(joker_name) = available_jokers.choose(&mut rng) {
+                println!("New joker acquired! {}", joker_name);
+                game_manager.player.jokers.push(JokerFactory::create_joker(joker_name));
+            }
         }
     }
 }
