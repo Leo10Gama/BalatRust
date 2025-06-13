@@ -439,14 +439,14 @@ impl GameManager {
     fn take_turn(&mut self) -> u8 {
         // Print the ante and target points
         println!("\n=== {} - Ante {} ===", self.current_blind, self.ante);
-        println!("Target: {} points", self.current_round.blind.score);
+        println!("Target: {} points", self.current_round.blind.score.to_string().bold());
 
         // Display boss blind ability if present
         if let Some(boss_ability) = &self.current_round.blind.boss_ability {
             println!("{}: {}", boss_ability.name(), boss_ability.description());
         }
 
-        println!("Current score: {}", self.current_round.score);
+        println!("Current score: {}", self.current_round.score.to_string().bold());
 
         // Print jokers and their abilities (description)
         println!("\nJokers:");
@@ -477,8 +477,8 @@ impl GameManager {
         // }
 
         // Print available actions
-        println!("\nHands remaining: {}", self.player.hands);
-        println!("Discards remaining: {}", self.player.discards);
+        println!("\nHands remaining: {}", self.player.hands.to_string().cyan());
+        println!("Discards remaining: {}", self.player.discards.to_string().red());
         
         // Prompt player to select cards and action
         println!("\nSelect cards (comma-separated indices) and action:");
@@ -572,10 +572,10 @@ impl GameManager {
                 
                 // Add to total score
                 let round_score = chips * mult;
-                println!("Round score: {} x {} = {}", chips, mult, round_score);
+                println!("Round score: {} x {} = {}", chips.to_string().cyan(), mult.to_string().red(), round_score.to_string().bold());
                 self.current_round.score += round_score;
                 pause_after_print(1000);
-                println!("Total score: {}", self.current_round.score);
+                println!("Total score: {}", self.current_round.score.to_string().bold());
                 pause_after_print(2000);
                 
                 // Remove played cards from hand
@@ -656,7 +656,7 @@ impl GameManager {
                     "J" => 10,
                     _ => card.rank.parse::<u64>().unwrap()
                 };
-                println!("{} scores {}", card, card_score);
+                println!("{} scores {}", card, card_score.to_string().cyan());
                 pause_after_print(400);
                 chips += card_score;
                 // Score any bonuses from jokers with ON SCORE abilities
@@ -664,7 +664,7 @@ impl GameManager {
                     joker.on_score(card, &mut chips, &mut mult);
                 }
             } else {
-                println!("{} scores 0 (debuffed)", card);
+                println!("{} scores {} (debuffed)", card, "0".cyan());
                 pause_after_print(400);
             }
         }

@@ -1,3 +1,5 @@
+use colored::*;
+
 use crate::Card;
 use crate::Suit;
 use crate::determine_poker_hand;
@@ -20,7 +22,7 @@ impl JokerAbility for JimboJoker {
 
     // +4 mult at end of the round
     fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
-        println!("{}: +4 mult", self.base.name);
+        println!("{}: {} mult", self.base.name, "+4".red());
         *mult += 4;
         pause_after_print(400);
     }
@@ -42,7 +44,7 @@ impl JokerAbility for GreedyJoker {
     // +3 mult for diamonds
     fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
         if card.suit == Suit::Diamonds {
-            println!("{}: +3 mult", self.base.name);
+            println!("{}: {} mult", self.base.name, "+3".red());
             *mult += 3;
             pause_after_print(400);
         }
@@ -65,7 +67,7 @@ impl JokerAbility for LustyJoker {
     // +3 mult for hearts
     fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
         if card.suit == Suit::Hearts {
-            println!("{}: +3 mult", self.base.name);
+            println!("{}: {} mult", self.base.name, "+3".red());
             *mult += 3;
             pause_after_print(400);
         }
@@ -88,7 +90,7 @@ impl JokerAbility for WrathfulJoker {
     // +3 mult for spades
     fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
         if card.suit == Suit::Spades {
-            println!("{}: +3 mult", self.base.name);
+            println!("{}: {} mult", self.base.name, "+3".red());
             *mult += 3;
             pause_after_print(400);
         }
@@ -111,7 +113,7 @@ impl JokerAbility for GluttonousJoker {
     // +3 mult for clubs
     fn on_score(&self, card: &Card, chips: &mut u64, mult: &mut u64) {
         if card.suit == Suit::Clubs {
-            println!("{}: +3 mult", self.base.name);
+            println!("{}: {} mult", self.base.name, "+3".red());
             *mult += 3;
             pause_after_print(400);
         }
@@ -140,7 +142,7 @@ impl JokerAbility for JollyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Pair | PokerHand::TwoPair | PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +8 mult", self.base.name);
+                println!("{}: {} mult", self.base.name, "+8".red());
                 *mult += 8;
                 pause_after_print(400);
             },
@@ -171,7 +173,7 @@ impl JokerAbility for ZanyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +12 mult", self.base.name);
+                println!("{}: {} mult", self.base.name, "+12".red());
                 *mult += 12;
                 pause_after_print(400);
             },
@@ -202,7 +204,7 @@ impl JokerAbility for MadJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::TwoPair | PokerHand::FullHouse | PokerHand::FlushHouse => {
-                println!("{}: +10 mult", self.base.name);
+                println!("{}: {} mult", self.base.name, "+10".red());
                 *mult += 10;
                 pause_after_print(400);
             },
@@ -233,7 +235,7 @@ impl JokerAbility for CrazyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Straight | PokerHand::StraightFlush => {
-                println!("{}: +12 mult", self.base.name);
+                println!("{}: {} mult", self.base.name, "+12".red());
                 *mult += 12;
                 pause_after_print(400);
             },
@@ -255,7 +257,7 @@ impl JokerAbility for DrollJoker {
         &self.base.description
     }
 
-    // +12 mult if hand has FLUSH
+    // +10 mult if hand has FLUSH
     fn end_of_round(&self, chips: &mut u64, mult: &mut u64, cards: &[Card], scoring_card_indeces: &Vec<usize>) {
         // Get actual played cards that scored
         let scoring_cards: Vec<Card> = scoring_card_indeces.iter()
@@ -264,8 +266,8 @@ impl JokerAbility for DrollJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Flush | PokerHand::StraightFlush | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +12 mult", self.base.name);
-                *mult += 12;
+                println!("{}: {} mult", self.base.name, "+10".red());
+                *mult += 10;
                 pause_after_print(400);
             },
             _ => {},
@@ -295,7 +297,7 @@ impl JokerAbility for SlyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Pair | PokerHand::TwoPair | PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +50 chips", self.base.name);
+                println!("{}: {} chips", self.base.name, "+50".cyan());
                 *chips += 50;
                 pause_after_print(400);
             },
@@ -326,7 +328,7 @@ impl JokerAbility for WilyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::ThreeOfAKind | PokerHand::FullHouse | PokerHand::FourOfAKind | PokerHand::FiveOfAKind | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +100 chips", self.base.name);
+                println!("{}: {} chips", self.base.name, "+100".cyan());
                 *chips += 100;
                 pause_after_print(400);
             },
@@ -357,7 +359,7 @@ impl JokerAbility for CleverJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::TwoPair | PokerHand::FullHouse | PokerHand::FlushHouse => {
-                println!("{}: +80 chips", self.base.name);
+                println!("{}: {} chips", self.base.name, "+80".cyan());
                 *chips += 80;
                 pause_after_print(400);
             },
@@ -388,7 +390,7 @@ impl JokerAbility for DeviousJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Straight | PokerHand::StraightFlush => {
-                println!("{}: +100 chips", self.base.name);
+                println!("{}: {} chips", self.base.name, "+100".cyan());
                 *chips += 100;
                 pause_after_print(400);
             },
@@ -419,7 +421,7 @@ impl JokerAbility for CraftyJoker {
         let (hand_type, _) = determine_poker_hand(&scoring_cards);
         match hand_type {
             PokerHand::Flush | PokerHand::StraightFlush | PokerHand::FlushHouse | PokerHand::FlushFive => {
-                println!("{}: +80 chips", self.base.name);
+                println!("{}: {} chips", self.base.name, "+80".cyan());
                 *chips += 80;
                 pause_after_print(400);
             },
