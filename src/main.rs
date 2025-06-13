@@ -170,26 +170,132 @@ impl std::fmt::Display for BlindType {
 pub struct Blind {
     name: String,
     score: u64,
+    description: String,
+    boss_ability: Option<Box<dyn BossBlindAbility>>,
+}
+
+pub trait BossBlindAbility {
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
+
+    fn is_card_debuffed(&self, card: &Card) -> bool;
+
+    // potential additional effects
+}
+
+pub struct TheClub;
+
+impl BossBlindAbility for TheClub {
+    fn name(&self) -> &str {
+        "The Club"
+    }
+
+    fn description(&self) -> &str {
+        "All Club cards are debuffed"
+    }
+
+    fn is_card_debuffed(&self, card: &Card) -> bool {
+        card.suit == Suit::Clubs
+    }
+}
+
+pub struct TheGoad;
+
+impl BossBlindAbility for TheGoad {
+    fn name(&self) -> &str {
+        "The Goad"
+    }
+
+    fn description(&self) -> &str {
+        "All Spade cards are debuffed"
+    }
+
+    fn is_card_debuffed(&self, card: &Card) -> bool {
+        card.suit == Suit::Spades
+    }
+}
+
+pub struct TheWindow;
+
+impl BossBlindAbility for TheWindow {
+    fn name(&self) -> &str {
+        "The Window"
+    }
+
+    fn description(&self) -> &str {
+        "All Diamond cards are debuffed"
+    }
+
+    fn is_card_debuffed(&self, card: &Card) -> bool {
+        card.suit == Suit::Diamonds
+    }
+}
+
+pub struct TheHead;
+
+impl BossBlindAbility for TheHead {
+    fn name(&self) -> &str {
+        "The Head"
+    }
+
+    fn description(&self) -> &str {
+        "All Heart cards are debuffed"
+    }
+
+    fn is_card_debuffed(&self, card: &Card) -> bool {
+        card.suit == Suit::Hearts
+    }
+}
+
+pub struct BossBlindFactory;
+
+impl BossBlindFactory {
+    pub fn create_boss_blind(name: &str) -> Box<dyn BossBlindAbility> {
+        match name {
+            "The Club" => Box::new(TheClub {}),
+            "The Goad" => Box::new(TheGoad {}),
+            "The Window" => Box::new(TheWindow {}),
+            "The Head" => Box::new(TheHead {}),
+            _ => panic!("Unknown boss blind ability: {}", name),
+        }
+    }
 }
 
 impl Blind {
     fn new(blind_type: BlindType, ante: u8) -> Self {
-        let (name, score) = match blind_type {
-            BlindType::Small => (
-                "Small Blind".to_string(),
-                ANTES[ante as usize]  // despite there being an ante 0, we start at 1
-            ),
-            BlindType::Big => (
-                "Big Blind".to_string(), 
-                (ANTES[ante as usize] as f64 * 1.5) as u64
-            ),
-            BlindType::Boss => (
-                "Boss Blind".to_string(),
-                ANTES[ante as usize] * 2
-                // TODO: Boss blind effects
-            ),
-        };
-        Self { name, score }
+        match blind_type {
+            BlindType::Small => Self {
+                name: "Small Blind".to_string(),
+                score: ANTES[ante as usize],  // despite there being an ante 0, we start at 1
+                description: "".to_string(),
+                boss_ability: None,
+            },
+            BlindType::Big => Self {
+                name: "Big Blind".to_string(), 
+                score: (ANTES[ante as usize] as f64 * 1.5) as u64,
+                description: "".to_string(),
+                boss_ability: None,
+            },
+            BlindType::Boss => {
+                let ability = {
+                    let boss_blinds = vec![  // pick a boss blind at random
+                        "The Club",
+                        "The Goad",
+                        "The Window",
+                        "The Head",
+                    ];
+                    let mut rng = rand::thread_rng();
+                    let random_boss = boss_blinds.choose(&mut rng).unwrap();
+                    BossBlindFactory::create_boss_blind(random_boss)
+                };
+                Self {
+                    name: format!("Boss Blind - {}", ability.name()),
+                    score: ANTES[ante as usize] * 2,
+                    description: ability.description().to_string(),
+                    boss_ability: Some(ability),
+                }
+            },
+        }
     }
 }
 
@@ -251,6 +357,12 @@ impl GameManager {
         // Print the ante and target points
         println!("\n=== {} - Ante {} ===", self.current_blind, self.ante);
         println!("Target: {} points", self.current_round.blind.score);
+
+        // Display boss blind ability if present
+        if let Some(boss_ability) = &self.current_round.blind.boss_ability {
+            println!("{}: {}", boss_ability.name(), boss_ability.description());
+        }
+
         println!("Current score: {}", self.current_round.score);
 
         // Print jokers and their abilities (description)
@@ -430,19 +542,32 @@ impl GameManager {
         for &i in scoring_card_indeces.iter() {
             // Score face value
             let card = &cards[i];
-            let card_score = match card.rank.as_str() {
-                "A" => 11,
-                "K" => 10,
-                "Q" => 10,
-                "J" => 10,
-                _ => card.rank.parse::<u64>().unwrap()
+            // Check if the card is debuffed by the boss blind
+            let is_debuffed = if let Some(boss_ability) = &self.current_round.blind.boss_ability {
+                let debuffed = boss_ability.is_card_debuffed(card);
+                debuffed
+            } else {
+                false
             };
-            println!("{} scores {}", card, card_score);
-            pause_after_print(400);
-            chips += card_score;
-            // Score any bonuses from jokers with ON SCORE abilities
-            for joker in &self.player.jokers {
-                joker.on_score(card, &mut chips, &mut mult);
+            
+            if !is_debuffed {
+                let card_score = match card.rank.as_str() {
+                    "A" => 11,
+                    "K" => 10,
+                    "Q" => 10,
+                    "J" => 10,
+                    _ => card.rank.parse::<u64>().unwrap()
+                };
+                println!("{} scores {}", card, card_score);
+                pause_after_print(400);
+                chips += card_score;
+                // Score any bonuses from jokers with ON SCORE abilities
+                for joker in &self.player.jokers {
+                    joker.on_score(card, &mut chips, &mut mult);
+                }
+            } else {
+                println!("{} scores 0 (debuffed)", card);
+                pause_after_print(400);
             }
         }
 
