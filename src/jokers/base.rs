@@ -1,3 +1,5 @@
+use colored::*;
+
 use crate::Card;
 use crate::Suit;
 use crate::jokers::*;
@@ -36,61 +38,109 @@ impl JokerFactory {
             "Joker" => Box::new(JimboJoker {
                 base: Joker {
                     name: "Joker".to_string(),
-                    description: "+4 Mult".to_string(),
+                    description: format!("{} {}",
+                        "+4".red().bold(),
+                        "Mult".bold(),
+                    ),
                 },
             }),
             "Greedy Joker" => Box::new(GreedyJoker {
                 base: Joker {
                     name: "Greedy Joker".to_string(),
-                    description: "Played cards with ♦Diamond suit give +3 Mult when scored".to_string(),
+                    description: format!(
+                        "Played cards with {} suit give {} {} when scored",
+                        "♦Diamond".bright_blue().bold(),
+                        "+3".red().bold(),
+                        "Mult".bold(),
+                    ),
                 }
             }),
             "Lusty Joker" => Box::new(LustyJoker {
                 base: Joker {
                     name: "Lusty Joker".to_string(),
-                    description: "Played cards with ♥Heart suit give +3 Mult when scored".to_string(),
+                    description: format!(
+                        "Played cards with {} suit give {} {} when scored",
+                        "♥Heart".red().bold(),
+                        "+3".red().bold(),
+                        "Mult".bold(),
+                    ),
                 }
             }),
             "Wrathful Joker" => Box::new(WrathfulJoker {
                 base: Joker {
                     name: "Wrathful Joker".to_string(),
-                    description: "Played cards with ♠Spade suit give +3 Mult when scored".to_string(),
+                    description: format!(
+                        "Played cards with {} suit give {} {} when scored",
+                        "♠Spade".bold(),
+                        "+3".red().bold(),
+                        "Mult".bold(),
+                    ),
                 }
             }),
             "Gluttonous Joker" => Box::new(GluttonousJoker {
                 base: Joker {
                     name: "Gluttonous Joker".to_string(),
-                    description: "Played cards with ♣Club suit give +3 Mult when scored".to_string(),
+                    description: format!(
+                        "Played cards with {} suit give {} {} when scored",
+                        "♣Club".green().bold(),
+                        "+3".red().bold(),
+                        "Mult".bold(),
+                    ),
                 }
             }),
             "Jolly Joker" => Box::new(JollyJoker {
                 base: Joker {
                     name: "Jolly Joker".to_string(),
-                    description: "+8 Mult if played hand contains a Pair".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+8".red().bold(),
+                        "Mult".bold(),
+                        "Pair".bold()
+                    ),
                 }
             }),
             "Zany Joker" => Box::new(ZanyJoker {
                 base: Joker {
                     name: "Zany Joker".to_string(),
-                    description: "+12 Mult if played hand contains a Three of a Kind".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+12".red().bold(),
+                        "Mult".bold(),
+                        "Three of a Kind".bold()
+                    ),
                 }
             }),
             "Mad Joker" => Box::new(MadJoker {
                 base: Joker {
                     name: "Mad Joker".to_string(),
-                    description: "+10 Mult if played hand contains a Two Pair".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+10".red().bold(),
+                        "Mult".bold(),
+                        "Two Pair".bold()
+                    ),
                 }
             }),
             "Crazy Joker" => Box::new(CrazyJoker {
                 base: Joker {
                     name: "Crazy Joker".to_string(),
-                    description: "+12 Mult if played hand contains a Straight".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+12".red().bold(),
+                        "Mult".bold(),
+                        "Straight".bold()
+                    ),
                 }
             }),
             "Droll Joker" => Box::new(DrollJoker {
                 base: Joker {
                     name: "Droll Joker".to_string(),
-                    description: "+10 Mult if played hand contains a Flush".to_string(),
+                    description: format!(
+                        "{} {} if played hand contains a {}",
+                        "+10".red().bold(),
+                        "Mult".bold(),
+                        "Flush".bold()
+                    ),
                 }
             }),
             _ => Box::new(JimboJoker {  // default to Jimbo

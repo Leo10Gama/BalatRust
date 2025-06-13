@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
+use colored::*;
 
 mod jokers;
 
@@ -24,9 +25,9 @@ impl std::fmt::Display for Suit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Suit::Spades => write!(f, "♠"),
-            Suit::Hearts => write!(f, "♥"),
-            Suit::Clubs => write!(f, "♣"),
-            Suit::Diamonds => write!(f, "♦"),
+            Suit::Hearts => write!(f, "{}", "♥".red()),
+            Suit::Clubs => write!(f, "{}", "♣".green()),
+            Suit::Diamonds => write!(f, "{}", "♦".bright_blue()),
         }
     }
 }
@@ -628,7 +629,7 @@ fn main() {
     // player.jokers.push(JokerFactory::create_joker("Gluttonous Joker"));
     // player.jokers.push(JokerFactory::create_joker("Lusty Joker"));
     // player.jokers.push(JokerFactory::create_joker("Greedy Joker"));
-    player.jokers.push(JokerFactory::create_joker("Zany Joker"));
+    player.jokers.push(JokerFactory::create_joker("Droll Joker"));
 
 
     let mut game_manager = GameManager::new(player);
