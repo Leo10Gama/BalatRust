@@ -257,6 +257,48 @@ impl GameManager {
         }
     }
 
+    fn calculate_interest(&self) -> i32 {
+        let base_money = self.player.money;
+        let interest_units = base_money / 5;  // Integer division to get complete units of $5
+        std::cmp::min(interest_units, 5)  // Cap at $5 maximum interest
+    }
+
+    fn calculate_remaining_hands_bonus(&self) -> i32 {
+        self.player.hands as i32  // $1 for each remaining hand
+    }
+
+    fn get_blind_bounty(&self) -> i32 {
+        match self.current_blind {
+            BlindType::Small => 3,
+            BlindType::Big => 4,
+            BlindType::Boss => 5,
+        }
+    }
+
+    fn award_round_rewards(&mut self) {
+        // Calculate all rewards
+        let blind_bounty = self.get_blind_bounty();
+        let hands_bonus = self.calculate_remaining_hands_bonus();
+        let interest = self.calculate_interest();
+        
+        // Print reward breakdown
+        println!("\nRewards:");
+        println!("Blind bounty: {}", format!("${}", blind_bounty).yellow());
+        pause_after_print(400);
+        println!("Remaining hands bonus: {}", format!("${}", hands_bonus).yellow());
+        pause_after_print(400);
+        println!("Interest earned: {}", format!("${}", interest).yellow());
+        pause_after_print(800);
+        
+        // Add all rewards to player's money
+        let total_reward = blind_bounty + hands_bonus + interest;
+        self.player.money += total_reward;
+        println!("\nTotal reward: {}", format!("${}", total_reward).yellow());
+        pause_after_print(400);
+        println!("New balance: {}", format!("${}", self.player.money).yellow().bold());
+        pause_after_print(2000);
+    }
+
     fn next_round(&mut self) {
         self.current_blind = match self.current_blind {
             BlindType::Small => BlindType::Big,
@@ -439,6 +481,7 @@ impl GameManager {
                 // Check if round is complete
                 if self.current_round.score >= self.current_round.blind.score {
                     println!("\nCongratulations! You've beaten the {}!", self.current_blind);
+                    self.award_round_rewards();
                     return 0;
                 } else if self.player.hands == 0 {
                     println!("\nYou've run out of hands! Game over.");
