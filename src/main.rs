@@ -199,9 +199,22 @@ impl Player {
         };
         self.sort_cards_in_hand();
     }
+    
+    // Swap jokers at the given indices
+    fn swap_jokers(&mut self, indices: &[usize]) -> bool {
+        if indices.len() != 2 {
+            return false;
+        }
+        
+        let [i, j] = [indices[0], indices[1]];
+        if i >= self.jokers.len() || j >= self.jokers.len() {
+            return false;
+        }
+        
+        self.jokers.swap(i, j);
+        true
+    }
 }
-
-
 
 pub struct Round {
     blind: Blind,
@@ -274,8 +287,8 @@ impl GameManager {
         if self.player.jokers.len() == 0 {
             println!("None");
         }
-        for joker in &self.player.jokers {
-            println!("[{}]: {}", joker.name(), joker.description());
+        for (i, joker) in self.player.jokers.iter().enumerate() {
+            println!("({}) [{}]: {}", i, joker.name(), joker.description());
         }
 
         // Print the cards in the player's hand (plus indices for selection)
@@ -304,6 +317,7 @@ impl GameManager {
         // Prompt player to select cards and action
         println!("\nSelect cards (comma-separated indices) and action:");
         println!("d for discard, p for play, s to toggle sort method");
+        println!("j for joker swap (format: 'j 0,1' to swap jokers at positions 0 and 1)");
         println!("Example: '0,1,2,3,4 p' to play the first 5 cards");
         
         // Get user input
@@ -322,6 +336,22 @@ impl GameManager {
                 if self.player.sort_method == SortMethod::ByRank { "by rank" } else { "by suit" });
             pause_after_print(1000);
             return 2; // Continue the game
+        }
+        
+        // Handle joker swap command
+        if parts.len() == 2 && (parts[0] == "j" || parts[0] == "J") {
+            let indices: Vec<usize> = parts[1]
+                .split(',')
+                .filter_map(|s| s.parse::<usize>().ok())
+                .collect();
+            
+            if self.player.swap_jokers(&indices) {
+                println!("Successfully swapped jokers at positions {} and {}", indices[0], indices[1]);
+            } else {
+                println!("Invalid joker indices! Please provide exactly two valid joker positions.");
+            }
+            pause_after_print(1000);
+            return 2;
         }
         
         if parts.len() != 2 {
