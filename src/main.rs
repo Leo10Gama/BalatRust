@@ -695,7 +695,14 @@ pub fn determine_poker_hand(cards: &[Card]) -> (PokerHand, Vec<usize>) {
 
     // FOUR OF A KIND [6♣, 6♥, 6♠, 6♦, 8♣]
     if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 4) {
-        return (PokerHand::FourOfAKind, rank_indices.get(rank).unwrap().clone());
+        // Find indices in original order
+        let mut scoring_indices = Vec::new();
+        for (i, card) in cards.iter().enumerate() {
+            if card.rank == *rank {
+                scoring_indices.push(i);
+            }
+        }
+        return (PokerHand::FourOfAKind, scoring_indices);
     }
 
     // FULL HOUSE [Q♠, Q♣, Q♥, 7♥, 7♦]
@@ -715,23 +722,38 @@ pub fn determine_poker_hand(cards: &[Card]) -> (PokerHand, Vec<usize>) {
 
     // THREE OF A KIND [2♠, 2♥, 2♦, 6♠, 9♦]
     if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 3) {
-        return (PokerHand::ThreeOfAKind, rank_indices.get(rank).unwrap().clone());
+        // Find indices in original order
+        let mut scoring_indices = Vec::new();
+        for (i, card) in cards.iter().enumerate() {
+            if card.rank == *rank {
+                scoring_indices.push(i);
+            }
+        }
+        return (PokerHand::ThreeOfAKind, scoring_indices);
     }
 
     // TWO PAIR [5♠, 5♥, 8♠, 8♦, 10♣]
     if ranks.values().filter(|&&count| count == 2).count() == 2 {
-        let mut pair_indices = Vec::new();
-        for (rank, &count) in &ranks {
-            if count == 2 {
-                pair_indices.extend(rank_indices.get(rank).unwrap());
+        // Find indices in original order
+        let mut scoring_indices = Vec::new();
+        for (i, card) in cards.iter().enumerate() {
+            if ranks.get(&card.rank).unwrap() == &2 {
+                scoring_indices.push(i);
             }
         }
-        return (PokerHand::TwoPair, pair_indices);
+        return (PokerHand::TwoPair, scoring_indices);
     }
 
     // PAIR [A♠, A♦, 4♣, 7♥, 9♥]
     if let Some((rank, _)) = ranks.iter().find(|(_, &count)| count == 2) {
-        return (PokerHand::Pair, rank_indices.get(rank).unwrap().clone());
+        // Find indices in original order
+        let mut scoring_indices = Vec::new();
+        for (i, card) in cards.iter().enumerate() {
+            if card.rank == *rank {
+                scoring_indices.push(i);
+            }
+        }
+        return (PokerHand::Pair, scoring_indices);
     }
 
     // HIGH CARD [A♣, 4♦, 7♥, 8♣, K♦]
