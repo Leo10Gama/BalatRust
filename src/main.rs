@@ -200,18 +200,22 @@ impl Player {
         self.sort_cards_in_hand();
     }
     
-    // Swap jokers at the given indices
-    fn swap_jokers(&mut self, indices: &[usize]) -> bool {
+    // Move a joker from one position to another, shifting other jokers as needed
+    fn move_joker(&mut self, indices: &[usize]) -> bool {
         if indices.len() != 2 {
             return false;
         }
         
-        let [i, j] = [indices[0], indices[1]];
-        if i >= self.jokers.len() || j >= self.jokers.len() {
+        let [from_idx, to_idx] = [indices[0], indices[1]];
+        if from_idx >= self.jokers.len() || to_idx >= self.jokers.len() {
             return false;
         }
-        
-        self.jokers.swap(i, j);
+
+        // Remove the joker from its current position
+        let joker = self.jokers.remove(from_idx);
+
+        // Insert it at the new position, which will automatically shift other elements
+        self.jokers.insert(to_idx, joker);
         true
     }
 }
@@ -317,7 +321,7 @@ impl GameManager {
         // Prompt player to select cards and action
         println!("\nSelect cards (comma-separated indices) and action:");
         println!("d for discard, p for play, s to toggle sort method");
-        println!("j for joker swap (format: 'j 0,1' to swap jokers at positions 0 and 1)");
+        println!("j for joker move (format: 'j 2,0' to move joker from position 2 to position 0)");
         println!("Example: '0,1,2,3,4 p' to play the first 5 cards");
         
         // Get user input
@@ -345,8 +349,8 @@ impl GameManager {
                 .filter_map(|s| s.parse::<usize>().ok())
                 .collect();
             
-            if self.player.swap_jokers(&indices) {
-                println!("Successfully swapped jokers at positions {} and {}", indices[0], indices[1]);
+            if self.player.move_joker(&indices) {
+                println!("Successfully moved joker from position {} to position {}", indices[0], indices[1]);
             } else {
                 println!("Invalid joker indices! Please provide exactly two valid joker positions.");
             }
