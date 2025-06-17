@@ -1,6 +1,5 @@
 mod base;
 mod common;
 
-pub use base::{Joker, JokerAbility};
+pub use base::{JokerAbility, JokerFactory};
 pub use common::*;
-pub use base::JokerFactory;

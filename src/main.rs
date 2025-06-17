@@ -10,7 +10,7 @@ mod jokers;
 mod blinds;
 mod cards;
 
-use jokers::{Joker, JokerAbility, JokerFactory};
+use jokers::{JokerAbility, JokerFactory};
 use blinds::{Blind, BlindType, BossBlindAbility};
 use cards::{Card, Suit};
 
